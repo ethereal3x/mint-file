@@ -78,6 +78,12 @@ func CheckVolceTosErr(err error) {
 	}
 }
 
+func CheckMinioError(err error) {
+	if err != nil {
+		hlog.Infof("Object Resource Error:%v", err.Error())
+	}
+}
+
 type ShardPart struct {
 	PartNumber   int       `json:"PartNumber,omitempty"`   // Part编号
 	ETag         string    `json:"ETag,omitempty"`         // ETag

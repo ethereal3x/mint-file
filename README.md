@@ -1,32 +1,56 @@
-# Mint-File
+## 📦 Mint-File 项目说明
 
-`mint-file` 是一个基于 [Hertz](https://www.cloudwego.io/docs/hertz/) 的轻量级服务，封装了与 [火山引擎 TOS](https://www.volcengine.com/product/tos) 的交互，支持上传、下载等操作，并通过简单的 Web 接口对外提供服务。
-
----
-
-## ✨ 功能特性
-
-- ✅ 封装 TOS SDK，简化调用
-- ✅ 支持上传、下载、文件访问公开化
-- ✅ Web API 接口基于 Hertz 框架实现
-- ✅ 模块结构清晰，可按需拓展（如监听器、异步处理等）
+`Mint-File` 是一个支持多存储后端的文件上传下载服务，具备良好的可扩展性与模块化结构。
 
 ---
 
-## 📁 目录结构
+### ✨ 功能特性
+
+* ✅ **多存储后端支持**：兼容火山引擎 TOS 和 MinIO
+* ✅ **统一接口设计**：相同 API 屏蔽不同后端实现细节
+* ✅ **对象管理功能**：支持上传、下载、公开访问
+* ✅ **模块化架构**：便于功能扩展与替换
+
+---
+
+### 📁 项目结构
 
 ```bash
 mint-file/
-├── service/
-│   ├── download/
-│   │   └── tos.go            # 下载服务封装
-│   ├── listener/
-│   │   └── tos.go            # 对 TOS 操作的监听或回调处理
-│   └── upload/
-│       ├── tos.go            # 上传服务封装
-│       ├── public.go         # 设置对象访问权限为公开
-│       └── download.go       # 上传后下载访问相关逻辑
-├── go.mod                    # Go 模块定义
-├── main.go                   # Hertz 启动入口
-├── README.md                 # 项目说明文档
-└── upload.go                 # 通用上传入口接口（或路由注册）
+├─ main.go          # 启动入口，初始化服务
+├─ upload.go        # 上传服务统一入口
+├─ download.go      # 下载服务统一入口
+├─ service/
+│  ├─ upload/       # 各上传实现（minio.go, tos.go）
+│  ├─ download/     # 各下载实现（minio.go, tos.go）
+│  ├─ parser/       # 文件解析器（支持 CSV、DOCX 等）
+│  ├─ listener/     # 存储事件监听（如 TOS 回调）
+│  └─ public.go     # 公共访问权限处理
+```
+
+---
+
+### ⚙️ 示例配置（YAML）
+
+```yaml
+file:
+  switch: tos
+  tos:
+    tos_endpoint: your_tos_endpoint
+    tos_access_key: your_tos_access_key
+    tos_access_secret: your_tos_access_secret
+    tos_region: your_tos_region
+    tos_bucket_name: your_tos_bucket_name
+    tos_location:
+      picture: test/picture/
+      file: test/file/
+    tos_shard: 5242880 # 5*1024*1024
+  minio:
+    minio_endpoint: your_tos_endpoint
+    minio_access_key: your_tos_access_key
+    minio_access_secret: your_tos_access_secret
+    minio_bucket_name: your_tos_bucket_name
+    minio_location:
+      picture: test/picture/
+      file: test/file/
+```

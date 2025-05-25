@@ -8,10 +8,16 @@ import (
 	"github.com/ethereal3x/mint-file/service"
 	"github.com/ethereal3x/mint-file/service/download"
 	"github.com/ethereal3x/mint-file/service/upload"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/volcengine/ve-tos-golang-sdk/v2/tos"
 	"net/http"
 	"strconv"
 )
+
+var client *tos.ClientV2
+var minioClient *minio.Client
+var err error
 
 // TOS配置
 const (
@@ -23,15 +29,27 @@ const (
 	TOSLocation        = "YOUR_TOSLocation"
 )
 
-var client *tos.ClientV2
-var err error
+const (
+	MinioAccessKey  = "ogLR75LInO4769GebWXK"
+	MinioSecretKey  = "2kHSuK5ISaNCabKmgUU42cGoWXpzB1viqMq9fIj9"
+	MinioEndPoint   = "127.0.0.1:9000"
+	MinioBucketName = "mint"
+	MinioLocation   = "test"
+)
 
 func main() {
 	// 支持最大 200M 文件上传
 	h := server.Default(server.WithMaxRequestBodySize(200 << 20))
 
-	// 初始化客户端
+	// 初始化tos客户端
 	client, err = tos.NewClientV2(TOSEndpoint, tos.WithRegion(TOSRegion), tos.WithCredentials(tos.NewStaticCredentials(TOSAccessKeyID, TOSSecretAccessKey)))
+
+	// 初始话minio客户端
+	// 使用 accessKey 和 secretKey 初始化 minio.Client
+	minioClient, err = minio.New(MinioEndPoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(MinioAccessKey, MinioSecretKey, ""),
+		Secure: false,
+	})
 
 	service.CheckVolceTosErr(err)
 
@@ -48,7 +66,7 @@ func main() {
 	h.GET("/download/browser", HandlerDownloadFileFunc)
 
 	// 查询文件下载进度
-	h.GET("/download/progress", HandlerQueryDonwloadStatus)
+	h.GET("/download/progress", HandlerQueryDownloadStatus)
 
 	// 解析文件
 	h.POST("/file/parse", HandlerParseFileFunc)
@@ -89,15 +107,23 @@ func HandlerUploadBinaryFunc(ctx context.Context, c *app.RequestContext) {
 	fileName := c.Query("file_name")
 	data := c.Request.Body()
 
+	//uploadBaseAggregation := &service.UploadBaseAggregation{
+	//	Ctx:        ctx,
+	//	Location:   TOSLocation,
+	//	FileName:   fileName,
+	//	BucketName: TOSBucketName,
+	//}
+
 	uploadBaseAggregation := &service.UploadBaseAggregation{
 		Ctx:        ctx,
-		Location:   TOSLocation,
+		Location:   MinioLocation,
 		FileName:   fileName,
-		BucketName: TOSBucketName,
+		BucketName: MinioBucketName,
 	}
 
 	aggregation := &service.UploadBinaryFileAggregation{Aggregation: uploadBaseAggregation, Data: data}
-	file, err := upload.NewTosObjectService(client).UploadBinaryFile(aggregation)
+	// file, err := upload.NewTosObjectService(client).UploadBinaryFile(aggregation)
+	file, err := upload.NewMinioObjectUploadService(minioClient).UploadBinaryFile(aggregation)
 	if err != nil {
 		c.JSON(http.StatusOK, utils.H{
 			"code":    http.StatusInternalServerError,
@@ -118,11 +144,18 @@ func HandlerUploadUrlFile(ctx context.Context, c *app.RequestContext) {
 	url := c.Query("url")
 	fileName := c.Query("file_name")
 
+	//uploadBaseAggregation := &service.UploadBaseAggregation{
+	//	Ctx:        ctx,
+	//	Location:   TOSLocation,
+	//	FileName:   fileName,
+	//	BucketName: TOSBucketName,
+	//}
+
 	uploadBaseAggregation := &service.UploadBaseAggregation{
 		Ctx:        ctx,
-		Location:   TOSLocation,
+		Location:   MinioLocation,
 		FileName:   fileName,
-		BucketName: TOSBucketName,
+		BucketName: MinioBucketName,
 	}
 
 	aggregation := &service.UploadUrlFileFileAggregation{
@@ -130,7 +163,8 @@ func HandlerUploadUrlFile(ctx context.Context, c *app.RequestContext) {
 		Url:         url,
 	}
 
-	requestID, err := upload.NewTosObjectService(client).UploadUrlFile(aggregation)
+	// requestID, err := upload.NewTosObjectService(client).UploadUrlFile(aggregation)
+	file, err := upload.NewMinioObjectUploadService(minioClient).UploadUrlFile(aggregation)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.H{
 			"code":    http.StatusInternalServerError,
@@ -141,9 +175,10 @@ func HandlerUploadUrlFile(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(http.StatusOK, utils.H{
-		"code":       http.StatusOK,
-		"message":    "上传成功",
-		"request_id": requestID,
+		"code":    http.StatusOK,
+		"message": "上传成功",
+		// "request_id": requestID,
+		"path": file,
 	})
 }
 
@@ -204,13 +239,13 @@ func HandlerDownloadFileFunc(ctx context.Context, c *app.RequestContext) {
 	fileName := c.Query("file_name")
 	agg := &service.DownloadFileAggregation{
 		Aggregation: &service.DownloadBaseAggregation{
-			Location:   TOSLocation,
+			Location:   MinioLocation,
 			FileName:   fileName,
-			BucketName: TOSBucketName,
+			BucketName: MinioBucketName,
 			Ctx:        ctx,
 		},
 	}
-	err = download.NewTosObjectDownloadService(client).DownloadFileToBrowser(c, agg)
+	err = download.NewMinioObjectDownloadService(minioClient).DownloadFileToBrowser(c, agg)
 	if err != nil {
 		c.JSON(200, utils.H{
 			"code":    http.StatusBadRequest,
@@ -222,7 +257,7 @@ func HandlerDownloadFileFunc(ctx context.Context, c *app.RequestContext) {
 
 // 查询下载进度
 
-func HandlerQueryDonwloadStatus(ctx context.Context, c *app.RequestContext) {
+func HandlerQueryDownloadStatus(ctx context.Context, c *app.RequestContext) {
 	downloadID := c.Query("file_name")
 	progress := download.NewTosObjectDownloadService(client).GetDownloadProgress(downloadID)
 	if progress == nil {

@@ -39,6 +39,23 @@ func (m MinioObjectUploadService) UploadBinaryFile(aggregation *service.UploadBi
 	return fmt.Sprintf("%s/%s", bucket, objectName), nil
 }
 
+func (m MinioObjectUploadService) GenerateTemporaryLink(aggregation *service.GenerateBaseAggregation) (string, error) {
+	ctx := aggregation.Ctx
+	bucket := aggregation.BucketName
+	objectName := path.Join(aggregation.Location, aggregation.FileName)
+
+	// 生成临时访问链接（比如 15 分钟有效）
+	expiry := aggregation.EffectiveDate
+	TemporaryURL, err := m.client.PresignedGetObject(ctx, bucket, objectName, expiry, nil)
+	// 这里传 nil 表示不添加额外参数
+	if err != nil {
+		return "", err
+	}
+
+	// 返回临时链接
+	return TemporaryURL.String(), nil
+}
+
 func (m MinioObjectUploadService) UploadUrlFile(aggregation *service.UploadUrlFileFileAggregation) (string, error) {
 	if aggregation == nil || aggregation.Aggregation == nil {
 		return "", fmt.Errorf("invalid upload aggregation")

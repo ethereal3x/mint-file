@@ -8,6 +8,7 @@ import (
 	"github.com/volcengine/ve-tos-golang-sdk/v2/tos/enum"
 	"io"
 	"net/http"
+	"path"
 )
 
 type TosObjectUploadService struct {
@@ -168,4 +169,16 @@ func (t *TosObjectUploadService) CancelFragmentUpload(a *service.CancelFragmentU
 		UploadID: a.UploadID,
 	})
 	service.CheckVolceTosErr(err)
+}
+
+func (t *TosObjectUploadService) GenerateTemporaryLink(aggregation *service.GenerateBaseAggregation) (string, error) {
+	fileLocal := path.Join(aggregation.Location, aggregation.FileName)
+	url, err := t.client.PreSignedURL(&tos.PreSignedURLInput{
+		HTTPMethod: http.MethodGet,
+		Bucket:     aggregation.BucketName,
+		Key:        fileLocal,
+		Expires:    int64(aggregation.EffectiveDate.Seconds()),
+	})
+	service.CheckVolceTosErr(err)
+	return url.SignedUrl, nil
 }

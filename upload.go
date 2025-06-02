@@ -10,4 +10,5 @@ type UploadFileService interface {
 	UploadFragmentFile(*service.UploadFragmentFileAggregation) (string, error)
 	ListUploadedFragments(*service.ListUploadedFragmentsAggregation, chan<- *service.ShardPart) error
 	CancelFragmentUpload(*service.CancelFragmentUploadAggregation) error
+	GenerateTemporaryLink(aggregation *service.DownloadBaseAggregation) (string, error)
 }

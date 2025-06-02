@@ -24,6 +24,14 @@ type DownloadBaseAggregation struct {
 	BucketName string
 }
 
+type GenerateBaseAggregation struct {
+	Ctx           context.Context
+	Location      string
+	FileName      string
+	BucketName    string
+	EffectiveDate time.Duration
+}
+
 type DownloadFileAggregation struct {
 	Aggregation *DownloadBaseAggregation
 	Data        []byte

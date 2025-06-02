@@ -20,7 +20,7 @@ mint-file/
 ├─ main.go          # 启动入口，初始化服务
 ├─ upload.go        # 上传服务统一入口
 ├─ download.go      # 下载服务统一入口
-├─ service/
+├─ tosService/
 │  ├─ upload/       # 各上传实现（minio.go, tos.go）
 │  ├─ download/     # 各下载实现（minio.go, tos.go）
 │  ├─ parser/       # 文件解析器（支持 CSV、DOCX 等）
